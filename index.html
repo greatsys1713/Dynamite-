@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Fake Ad Investment Game</title>
+<style>
+  /* ===== 설정: 정답·배율은 여기만 바꾸면 됨 ===== */
+  :root{
+    --bg:#0f1220; --card:#1a1f36; --text:#f4f5fb; --muted:#9aa0bd;
+    --real:#22c55e; --fake:#ef4444; --gold:#facc15;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    background:radial-gradient(circle at 50% 0%,#232a4d 0%,var(--bg) 60%);
+    color:var(--text); display:flex; justify-content:center; align-items:center; min-height:100%;
+    user-select:none;
+  }
+  .app{width:100%;max-width:420px;padding:24px 20px;text-align:center}
+  .screen{display:none;flex-direction:column;gap:20px;animation:fade .3s ease}
+  .screen.active{display:flex}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  h1{font-size:28px;line-height:1.2}
+  h1 span{color:var(--gold)}
+  .sub{color:var(--muted);font-size:15px;line-height:1.5}
+
+  .rules{background:var(--card);border-radius:16px;padding:16px;text-align:left;font-size:14px;line-height:1.7}
+  .rules b{color:var(--gold)}
+
+  .round-label{font-size:14px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
+  .dots{display:flex;justify-content:center;gap:10px}
+  .dot{width:34px;height:34px;border-radius:50%;background:var(--card);border:2px solid #2d3459;
+       display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700}
+  .dot.now{border-color:var(--gold)}
+  .dot.win{background:var(--real);border-color:var(--real)}
+  .dot.lose{background:var(--fake);border-color:var(--fake)}
+
+  .wallet{background:var(--card);border-radius:20px;padding:24px 16px}
+  .wallet small{color:var(--muted);font-size:13px;letter-spacing:1px}
+  .money{font-size:64px;font-weight:800;font-variant-numeric:tabular-nums;transition:color .2s}
+  .money.up{color:var(--real)} .money.down{color:var(--fake)}
+  .delta{height:22px;font-size:17px;font-weight:700}
+
+  .question{font-size:17px;line-height:1.5}
+  .buttons{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  button{
+    border:none;border-radius:18px;font-size:22px;font-weight:800;color:#fff;padding:26px 0;
+    cursor:pointer;transition:transform .1s,opacity .2s;font-family:inherit;
+  }
+  button:active{transform:scale(.96)}
+  button:disabled{opacity:.35;cursor:default}
+  button.picked{opacity:1;outline:4px solid #fff}
+  .btn-real{background:var(--real)}
+  .btn-fake{background:var(--fake)}
+  .btn-main{background:linear-gradient(135deg,#6366f1,#8b5cf6);font-size:19px;padding:18px 0;width:100%}
+
+  .result{min-height:58px;font-size:20px;font-weight:800;line-height:1.4}
+  .result .answer{display:block;font-size:14px;font-weight:500;color:var(--muted);margin-top:4px}
+
+  .final-money{font-size:72px;font-weight:800;color:var(--gold);font-variant-numeric:tabular-nums}
+  .stat{font-size:16px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- 시작 화면 -->
+  <section class="screen active" id="s-start">
+    <h1>Fake Ad<br><span>Investment Game</span></h1>
+    <p class="sub">Is the ad on the screen <b>Real</b> or <b>Fake</b>?<br>Bet all your money and find out!</p>
+    <div class="rules">
+      💵 You start with <b>$10</b><br>
+      🎮 4 rounds · ALL-IN every round<br>
+      📈 Correct → money <b>×1.5</b><br>
+      📉 Wrong → money <b>×0.5</b><br>
+      🏆 Most money after Round 4 wins!
+    </div>
+    <button class="btn-main" id="startBtn">START</button>
+  </section>
+
+  <!-- 라운드 화면 -->
+  <section class="screen" id="s-round">
+    <div class="round-label" id="roundLabel">Round 1 / 4</div>
+    <div class="dots" id="dots"></div>
+    <div class="wallet">
+      <small>YOUR MONEY</small>
+      <div class="money" id="money">$10.00</div>
+      <div class="delta" id="delta"></div>
+    </div>
+    <p class="question" id="question">Look at the ad on the screen.<br><b>Real or Fake?</b></p>
+    <div class="buttons">
+      <button class="btn-real" id="realBtn">REAL</button>
+      <button class="btn-fake" id="fakeBtn">FAKE</button>
+    </div>
+    <div class="result" id="result"></div>
+    <button class="btn-main" id="nextBtn" style="display:none">NEXT ROUND →</button>
+  </section>
+
+  <!-- 최종 화면 -->
+  <section class="screen" id="s-final">
+    <div class="round-label">Game Over</div>
+    <h1>Your Final Money</h1>
+    <div class="final-money" id="finalMoney">$0.00</div>
+    <div class="dots" id="finalDots"></div>
+    <p class="stat" id="finalStat"></p>
+    <p class="sub">Raise your hand if you have the most money! 🙋</p>
+    <button class="btn-main" id="restartBtn">PLAY AGAIN</button>
+  </section>
+
+</div>
+
+<script>
+/* ================= 설정 =================
+   ANSWERS : 라운드별 정답 (real / fake)
+   START   : 시작 금액
+   WIN     : 맞혔을 때 배율
+   LOSE    : 틀렸을 때 배율
+======================================== */
+const ANSWERS = ['real', 'fake', 'fake', 'real'];
+const START = 10;
+const WIN = 1.5;
+const LOSE = 0.5;
+const ANIM_MS = 1200;           // 금액이 바뀌는 애니메이션 시간
+const STORE_KEY = 'fakeAdGame_v1';
+
+let state = { round: 0, money: START, history: [], answered: false };
+
+const $ = id => document.getElementById(id);
+const fmt = v => '$' + v.toFixed(2);
+
+function save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){} }
+function load(){ try{ const s = JSON.parse(localStorage.getItem(STORE_KEY)); if(s && Array.isArray(s.history)) return s; }catch(e){} return null; }
+function clearSave(){ try{ localStorage.removeItem(STORE_KEY); }catch(e){} }
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+}
+
+function renderDots(el){
+  el.innerHTML = '';
+  for(let i = 0; i < ANSWERS.length; i++){
+    const d = document.createElement('div');
+    d.className = 'dot';
+    const h = state.history[i];
+    if(h === true){ d.classList.add('win'); d.textContent = '✓'; }
+    else if(h === false){ d.classList.add('lose'); d.textContent = '✗'; }
+    else { d.textContent = i + 1; if(i === state.round) d.classList.add('now'); }
+    el.appendChild(d);
+  }
+}
+
+function renderRound(){
+  $('roundLabel').textContent = `Round ${state.round + 1} / ${ANSWERS.length}`;
+  $('money').textContent = fmt(state.money);
+  $('money').className = 'money';
+  $('delta').textContent = '';
+  $('result').innerHTML = '';
+  $('nextBtn').style.display = 'none';
+  ['realBtn','fakeBtn'].forEach(b => { $(b).disabled = false; $(b).classList.remove('picked'); });
+  renderDots($('dots'));
+  show('s-round');
+}
+
+function animateMoney(from, to, done){
+  const el = $('money');
+  el.className = 'money ' + (to > from ? 'up' : 'down');
+  const t0 = performance.now();
+  function step(now){
+    const p = Math.min((now - t0) / ANIM_MS, 1);
+    const eased = 1 - Math.pow(1 - p, 3);          // 처음엔 빠르게, 끝에서 천천히
+    el.textContent = fmt(from + (to - from) * eased);
+    if(p < 1) requestAnimationFrame(step);
+    else { el.textContent = fmt(to); done && done(); }
+  }
+  requestAnimationFrame(step);
+}
+
+function pick(choice){
+  if(state.answered) return;
+  state.answered = true;
+
+  const correct = choice === ANSWERS[state.round];
+  const before = state.money;
+  const after = Math.round(before * (correct ? WIN : LOSE) * 100) / 100;
+
+  $('realBtn').disabled = true; $('fakeBtn').disabled = true;
+  $(choice === 'real' ? 'realBtn' : 'fakeBtn').classList.add('picked');
+  try{ navigator.vibrate && navigator.vibrate(correct ? 60 : [80,60,80]); }catch(e){}
+
+  const diff = after - before;
+  $('delta').textContent = (diff >= 0 ? '+' : '−') + fmt(Math.abs(diff)) + (correct ? '  📈' : '  📉');
+  $('delta').style.color = correct ? 'var(--real)' : 'var(--fake)';
+
+  animateMoney(before, after, () => {
+    state.money = after;
+    state.history.push(correct);
+    save();
+    const ans = ANSWERS[state.round].toUpperCase();
+    $('result').innerHTML = (correct ? '🎉 Correct! ×' + WIN : '💸 Wrong! ×' + LOSE)
+      + `<span class="answer">This ad was ${ans}</span>`;
+    $('result').style.color = correct ? 'var(--real)' : 'var(--fake)';
+    renderDots($('dots'));
+    $('nextBtn').textContent = state.round + 1 < ANSWERS.length ? 'NEXT ROUND →' : 'SEE RESULT 🏆';
+    $('nextBtn').style.display = 'block';
+  });
+}
+
+function next(){
+  state.round++;
+  state.answered = false;
+  save();
+  if(state.round < ANSWERS.length) renderRound();
+  else renderFinal();
+}
+
+function renderFinal(){
+  const wins = state.history.filter(Boolean).length;
+  $('finalStat').textContent = `${wins} / ${ANSWERS.length} correct`;
+  renderDots($('finalDots'));
+  show('s-final');
+  // 최종 금액 카운트 애니메이션
+  const el = $('finalMoney'); const t0 = performance.now(); const to = state.money;
+  (function step(now){
+    const p = Math.min((now - t0) / 1000, 1);
+    el.textContent = fmt(to * (1 - Math.pow(1 - p, 3)));
+    if(p < 1) requestAnimationFrame(step);
+  })(t0);
+}
+
+function startGame(){
+  state = { round: 0, money: START, history: [], answered: false };
+  save();
+  renderRound();
+}
+
+$('startBtn').onclick = startGame;
+$('restartBtn').onclick = () => { clearSave(); show('s-start'); };
+$('realBtn').onclick = () => pick('real');
+$('fakeBtn').onclick = () => pick('fake');
+$('nextBtn').onclick = next;
+
+// 새로고침해도 진행 상황 유지
+const saved = load();
+if(saved && saved.history.length > 0){
+  state = saved;
+  if(state.round >= ANSWERS.length) renderFinal();
+  else {
+    state.answered = state.history.length > state.round;
+    if(state.answered){ state.round++; state.answered = false; }
+    state.round < ANSWERS.length ? renderRound() : renderFinal();
+  }
+}
+</script>
+</body>
+</html>
